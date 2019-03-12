@@ -11,6 +11,15 @@ def createEntry(cursor):
 
     cursor.execute(command.format(name,desc))
 
+
+    print("Add tags")
+    tags = [x for x in input().split()]
+
+    for elements in tags:
+        command = "INSERT IGNORE INTO tags VALUES (NULL, \"{}\")"
+        cursor.execute(command.format(elements))
+
+        cursor.execute("INSERT INTO tagMap VALUES ((SELECT id FROM tags WHERE name=\"{}\"), (SELECT id FROM proofs WHERE name=\"{}\"))".format(elements, name))
 #Establish connection
 sql = pymysql.connect(
         host='localhost',
@@ -43,13 +52,13 @@ if cursor.rowcount == 0:
     cursor.execute("CREATE TABLE proofs (id INT NOT NULL AUTO_INCREMENT PRIMARY KEY, \
                     name VARCHAR(255), description TEXT)")
 
-cursor.execute("SHOW TABLES like 'tags'")
+cursor.execute("SHOW TABLES like 'tags'") #Using the unique constraint here is not ideal, results in a warning every time you insert a duplicate
 if cursor.rowcount == 0:
-    cursor.execute("CREATE TABLE tags (id INT NOT NULL AUTO_INCREMENT PRIMARY KEY, name VARCHAR(255))")
+    cursor.execute("CREATE TABLE tags (id INT NOT NULL AUTO_INCREMENT PRIMARY KEY, name VARCHAR(255), CONSTRAINT uniqueName UNIQUE(name))")
 
 cursor.execute("SHOW TABLES like 'tagMap'")
 if cursor.rowcount == 0:
-    cursor.execute("CREATE TABLE tagMap (mapID INT NOT NULL AUTO_INCREMENT PRIMARY KEY, tagID int, proofID int, \
+    cursor.execute("CREATE TABLE tagMap (tagID int, proofID int, \
                     FOREIGN KEY (tagID) REFERENCES tags(id), FOREIGN KEY (proofID) REFERENCES proofs(id))")
 
 #User interaction loop
