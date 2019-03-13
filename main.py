@@ -13,13 +13,34 @@ def createEntry(cursor):
 
 
     print("Add tags")
-    tags = [x for x in input().split()]
+    tags = [str(x) for x in input().split()]
 
     for elements in tags:
         command = "INSERT IGNORE INTO tags VALUES (NULL, \"{}\")"
         cursor.execute(command.format(elements))
 
         cursor.execute("INSERT INTO tagMap VALUES ((SELECT id FROM tags WHERE name=\"{}\"), (SELECT id FROM proofs WHERE name=\"{}\"))".format(elements, name))
+
+def tagSearch(cursor):
+    print("Type tags")
+    tags = [str(x) for x in input().split()]
+
+    command = "SELECT * FROM proofs WHERE id IN (SELECT proofID from tagMap INNER JOIN tags ON tagID = tags.id where tags.name in ("
+
+    firstTime = 1;
+    for elements in tags:
+        if not firstTime:
+            command += ", "
+            firstTime = 0;
+        command += "\'{}\'".format(elements)
+    command += "))"
+    cursor.execute(command)
+
+    for rows in cursor:
+        print(rows[1:])
+
+
+
 #Establish connection
 sql = pymysql.connect(
         host='localhost',
@@ -47,18 +68,18 @@ except pymysql.err.InternalError:
 
 cursor = sql.cursor()
 #Create the necessary tables if they don't exist
-cursor.execute("SHOW TABLES like 'proofs'")
+cursor.execute("SHOW TABLES LIKE 'proofs'")
 if cursor.rowcount == 0:
     cursor.execute("CREATE TABLE proofs (id INT NOT NULL AUTO_INCREMENT PRIMARY KEY, \
                     name VARCHAR(255), description TEXT)")
 
-cursor.execute("SHOW TABLES like 'tags'") #Using the unique constraint here is not ideal, results in a warning every time you insert a duplicate
+cursor.execute("SHOW TABLES LIKE 'tags'") #Using the unique constraint here is not ideal, results in a warning every time you insert a duplicate
 if cursor.rowcount == 0:
     cursor.execute("CREATE TABLE tags (id INT NOT NULL AUTO_INCREMENT PRIMARY KEY, name VARCHAR(255), CONSTRAINT uniqueName UNIQUE(name))")
 
-cursor.execute("SHOW TABLES like 'tagMap'")
+cursor.execute("SHOW TABLES LIKE 'tagMap'")
 if cursor.rowcount == 0:
-    cursor.execute("CREATE TABLE tagMap (tagID int, proofID int, \
+    cursor.execute("CREATE TABLE tagMap (id INT NOT NULL AUTO_INCREMENT PRIMARY KEY, tagID int, proofID int, \
                     FOREIGN KEY (tagID) REFERENCES tags(id), FOREIGN KEY (proofID) REFERENCES proofs(id))")
 
 #User interaction loop
@@ -78,6 +99,15 @@ while not exitFlag:
             cursor.execute("SELECT * FROM proofs")
             for rows in cursor:
                 print(rows[1:])
+
+        elif command == "search name":
+            print("Type the name")
+            cursor.execute("SELECT * FROM proofs WHERE name LIKE \'{}%\'".format(input()))
+            for rows in cursor:
+                print(rows[1:])
+
+        elif command == "search tags":
+            tagSearch(cursor)
 
         else:
             print("Invalid Command, Try again")
