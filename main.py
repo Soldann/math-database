@@ -21,7 +21,7 @@ def createEntry(cursor):
 
         cursor.execute("INSERT INTO tagMap VALUES ((SELECT id FROM tags WHERE name=\"{}\"), (SELECT id FROM proofs WHERE name=\"{}\"))".format(elements, name))
 
-def tagSearch(cursor):
+def tagSearch(cursor): #searches for proofs matching at least one tag
     print("Type tags")
     tags = [str(x) for x in input().split()]
 
@@ -31,7 +31,7 @@ def tagSearch(cursor):
     for elements in tags:
         if not firstTime:
             command += ", "
-            firstTime = 0;
+        firstTime = 0;
         command += "\'{}\'".format(elements)
     command += "))"
     cursor.execute(command)
@@ -39,7 +39,26 @@ def tagSearch(cursor):
     for rows in cursor:
         print(rows[1:])
 
+def tagAndSearch(cursor): #searches for proofs matching all tags, this will be merged with the other tag search eventually
+    print("Type tags")
+    tags = [str(x) for x in input().split()]
 
+    command = "SELECT * FROM proofs WHERE id IN " \
+              "(SELECT proofID FROM tagMap WHERE tagID IN " \
+              "(SELECT id FROM tags WHERE name IN ("
+
+    firstTime = 1;
+    for elements in tags:
+        if not firstTime:
+            command += ", "
+        firstTime = 0;
+        command += "\'{}\'".format(elements)
+
+    command += ")) GROUP BY proofID HAVING COUNT(proofID) = {})".format(len(tags))
+    cursor.execute(command)
+
+    for rows in cursor:
+        print(rows[1:])
 
 #Establish connection
 sql = pymysql.connect(
@@ -108,6 +127,9 @@ while not exitFlag:
 
         elif command == "search tags":
             tagSearch(cursor)
+
+        elif command == "search tags -and":
+            tagAndSearch(cursor)
 
         else:
             print("Invalid Command, Try again")
